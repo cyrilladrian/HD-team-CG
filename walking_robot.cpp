@@ -1,5 +1,5 @@
-#include <GL/glut.h>
-#include <GL/glu.h>
+#define GL_SILENCE_DEPRECATION
+#include <GLUT/glut.h>
 #include <cstdio>
 #include <cmath>
 #include <string>
@@ -227,40 +227,127 @@ static const float WALK_SPEED     = 0.6f;
 
 static int   g_frame   = 0;
 static float g_time    = 0.0f;
+static float g_lastTime = 0.0f;
 static bool  g_capture = false;  // set true via argv to export PPM frames
 static RobotPose g_robot;
 
-void updatePose(RobotPose& p, float t) {
+// Keyboard state
+static bool g_keys[512] = {};  // Track which keys are pressed
+
+// Robot movement state
+static float g_robotX = 0.0f;       // World X position
+static float g_robotZ = 0.0f;       // World Z position
+static float g_robotYaw = 0.0f;     // Rotation around Y axis (degrees)
+static float g_walkPhase = 0.0f;    // Current walking animation phase
+static float g_currentSpeed = 0.0f; // Current walking speed
+
+// Keyboard input handlers (write in the report)
+void keyboard(unsigned char key, int x, int y) {
+    if (key == 27) exit(0);  // ESC to quit
+    g_keys[key] = true;
+}
+
+void keyboardUp(unsigned char key, int x, int y) {
+    g_keys[key] = false;
+}
+
+void special(int key, int x, int y) {
+    g_keys[key + 256] = true;
+}
+
+void specialUp(int key, int x, int y) {
+    g_keys[key + 256] = false;
+}
+
+void updatePose(RobotPose& p, float deltaTime) {
     const float PI = 3.14159265f;
-    float phase = 2.0f * PI * t / STRIDE_PERIOD;
+    
+    float speedTarget = 0.0f;
+    static float targetYaw = g_robotYaw; 
+    bool isMoving = false;
 
-    p.pelvis->position.z() = WALK_SPEED * t;
+    if (g_keys['w'] || g_keys['W']) {
+        speedTarget = 1.0f;
+        targetYaw = 0.0f;
+        isMoving = true;
+    } else if (g_keys['a'] || g_keys['A']) {
+        speedTarget = 1.0f;
+        targetYaw = 90.0f;
+        isMoving = true;
+    } else if (g_keys['s'] || g_keys['S']) {
+        speedTarget = 1.0f;
+        targetYaw = 180.0f;
+        isMoving = true;
+    } else if (g_keys['d'] || g_keys['D']) {
+        speedTarget = 1.0f;
+        targetYaw = -90.0f;
+        isMoving = true;
+    }
+    
+    // Smooth the speed change to avoid abrupt starts/stops
+    g_currentSpeed += (speedTarget - g_currentSpeed) * 0.1f;
+    
+    // Smoothly rotate towards the target yaw
+    float yawDiff = targetYaw - g_robotYaw;
+    
+    // Normalize angle: ensure shortest rotation path (e.g., from 170 degrees to -170 degrees only requires 20 degree rotation)
+    while (yawDiff > 180.0f) yawDiff -= 360.0f;
+    while (yawDiff < -180.0f) yawDiff += 360.0f;
+    
+    // Only update Yaw when moving or angle is not aligned
+    if (std::abs(yawDiff) > 0.1f) {
+        g_robotYaw += yawDiff * 0.15f; // 0.15 為轉向靈敏度
+    } else {
+        g_robotYaw = targetYaw;
+    }
+    
+    // update position based on current speed and direction
+    float moveDistance = g_currentSpeed * WALK_SPEED * deltaTime;
+    float yawRad = g_robotYaw * PI / 180.0f;
+    
+    g_robotX += moveDistance * std::sin(yawRad);
+    g_robotZ += moveDistance * std::cos(yawRad);
+    
+    if (g_currentSpeed > 0.01f) {
+        g_walkPhase += (2.0f * PI * g_currentSpeed / STRIDE_PERIOD) * deltaTime;
+        if (g_walkPhase > 2.0f * PI)
+            g_walkPhase -= 2.0f * PI;
+    } else {
+        g_walkPhase *= 0.9f; 
+    }
+    
+    float phase = g_walkPhase;
+    
+    p.pelvis->position.x() = g_robotX;
     p.pelvis->position.y() = 0.80f + BODY_BOB * std::abs(std::sin(phase));
-
+    p.pelvis->position.z() = g_robotZ;
+    p.pelvis->rotation.y() = g_robotYaw;
+    
     p.torso->rotation.z() = BODY_ROCK * std::sin(2.0f * phase);
-
+    
+    // Leg animation
     p.leftThigh->rotation.x()  =  HIP_SWING * std::sin(phase);
     p.leftShin->rotation.x()   =  KNEE_BEND * std::max(0.0f, std::sin(phase + PI / 4.0f));
     p.leftFoot->rotation.x()   = -ANKLE_COMP * std::sin(phase);
-
+    
     p.rightThigh->rotation.x() =  HIP_SWING * std::sin(phase + PI);
     p.rightShin->rotation.x()  =  KNEE_BEND * std::max(0.0f, std::sin(phase + PI + PI / 4.0f));
     p.rightFoot->rotation.x()  = -ANKLE_COMP * std::sin(phase + PI);
-
+    
+    // Arm animation
     p.leftUpperArm->rotation.x()  = -ARM_SWING * std::sin(phase);
     p.rightUpperArm->rotation.x() = -ARM_SWING * std::sin(phase + PI);
-
-    // Spinning antenna: 255 deg/s → ~1.4 s per full revolution
-    p.antenna->rotation.y() = std::fmod(255.0f * t, 360.0f);
-
-    // Bouncing heart: 1.8 Hz heartbeat — position bounce + XY scale pulse
+    
+    // Rotating antenna and heartbeat
+    p.antenna->rotation.y() = std::fmod(255.0f * g_time, 360.0f);
+    
     static const float HEART_FREQ = 1.8f;
-    float hb = std::abs(std::sin(2.0f * PI * HEART_FREQ * t));
+    float hb = std::abs(std::sin(2.0f * PI * HEART_FREQ * g_time));
     p.heart->position.y() = 0.08f + 0.010f * hb;
 }
 
 void display() {
-    updatePose(g_robot, g_time);
+    updatePose(g_robot, 1.0f / FPS);
 
     glClearColor(0.15f, 0.15f, 0.20f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -270,12 +357,13 @@ void display() {
     glLoadIdentity();
     gluPerspective(45.0, (double)WIN_W / WIN_H, 0.1, 100.0);
 
-    // Camera: side view, robot walks along +Z
+    // Camera: side view, follows robot
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    float px = g_robot.pelvis ? g_robot.pelvis->position.x() : 0.0f;
     float pz = g_robot.pelvis ? g_robot.pelvis->position.z() : 0.0f;
-    gluLookAt(3.5, 2.5, pz + 5.0,   // eye: to the right and behind
-              0.0, 1.2, pz,           // look at robot's hip height
+    gluLookAt(px + 3.5, 2.5, pz + 5.0,   // eye: to the right and behind
+              px, 1.2, pz,                 // look at robot's hip height
               0.0, 1.0, 0.0);
 
     // Simple lighting
@@ -305,11 +393,11 @@ void display() {
 }
 
 void timer(int) {
-    g_time  = g_frame / FPS;
+    g_time = g_frame / FPS;
+    g_lastTime = g_time;
     g_frame++;
     glutPostRedisplay();
-    if (g_time < DURATION)
-        glutTimerFunc((unsigned)(1000.0f / FPS), timer, 0);
+    glutTimerFunc((unsigned)(1000.0f / FPS), timer, 0);  // Infinite loop
 }
 
 int main(int argc, char** argv) {
@@ -325,6 +413,10 @@ int main(int argc, char** argv) {
     g_robot = buildRobot();
 
     glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
+    glutKeyboardUpFunc(keyboardUp);
+    glutSpecialFunc(special);
+    glutSpecialUpFunc(specialUp);
     glutTimerFunc(0, timer, 0);
     glutMainLoop();
     return 0;
