@@ -10,188 +10,130 @@
 
 using namespace Eigen;
 
-struct ModelNode {
+struct ModelNode
+{
     std::string name;
     Vector3f position;
-    Vector3f rotation;   // Euler degrees (X, Y, Z applied Z→Y→X)
+    Vector3f rotation;
     Vector3f scale;
     std::vector<std::unique_ptr<ModelNode>> children;
 
-    ModelNode(const std::string& n,
-              const Vector3f& pos = Vector3f::Zero(),
-              const Vector3f& rot = Vector3f::Zero(),
-              const Vector3f& scl = Vector3f::Ones())
-        : name(n), position(pos), rotation(rot), scale(scl) {}
+    ModelNode(const std::string &n, const Vector3f &pos = Vector3f::Zero(), const Vector3f &rot = Vector3f::Zero(), const Vector3f &scl = Vector3f::Ones()): name(n), position(pos), rotation(rot), scale(scl) {}
 
-    ModelNode* addChild(const std::string& n, const Vector3f& pos,
-                        const Vector3f& scl,
-                        const Vector3f& rot = Vector3f::Zero()) {
+    ModelNode *addChild(const std::string &n, const Vector3f &pos, const Vector3f &scl, const Vector3f &rot = Vector3f::Zero())
+    {
         children.push_back(std::make_unique<ModelNode>(n, pos, rot, scl));
         return children.back().get();
     }
 };
 
-struct RobotPose {
+struct RobotPose
+{
     std::unique_ptr<ModelNode> root;
-    ModelNode* pelvis        = nullptr;
-    ModelNode* torso         = nullptr;
-    ModelNode* leftUpperArm  = nullptr;
-    ModelNode* rightUpperArm = nullptr;
-    ModelNode* leftThigh     = nullptr;
-    ModelNode* leftShin      = nullptr;
-    ModelNode* leftFoot      = nullptr;
-    ModelNode* rightThigh    = nullptr;
-    ModelNode* rightShin     = nullptr;
-    ModelNode* rightFoot     = nullptr;
-    ModelNode* antenna       = nullptr;
-    ModelNode* heart         = nullptr;
+    ModelNode *pelvis = nullptr;
+    ModelNode *torso = nullptr;
+    ModelNode *leftUpperArm = nullptr;
+    ModelNode *rightUpperArm = nullptr;
+    ModelNode *leftThigh = nullptr;
+    ModelNode *leftShin = nullptr;
+    ModelNode *leftFoot = nullptr;
+    ModelNode *rightThigh = nullptr;
+    ModelNode *rightShin = nullptr;
+    ModelNode *rightFoot = nullptr;
+    ModelNode *antenna = nullptr;
+    ModelNode *heart = nullptr;
 };
 
-RobotPose buildRobot() {
+RobotPose buildRobot()
+{
     RobotPose p;
 
-    p.root = std::make_unique<ModelNode>(
-        "Pelvis",
-        Vector3f(0.0f, 0.80f, 0.0f),
-        Vector3f::Zero(),
-        Vector3f(0.60f, 0.30f, 0.40f));
+    p.root = std::make_unique<ModelNode>("Pelvis", Vector3f(0.0f, 0.80f, 0.0f), Vector3f::Zero(), Vector3f(0.60f, 0.30f, 0.40f));
     p.pelvis = p.root.get();
 
-    auto torso = p.pelvis->addChild(
-        "Torso",
-        Vector3f(0.0f, 0.45f, 0.0f),
-        Vector3f(0.70f, 0.80f, 0.45f));
+    auto torso = p.pelvis->addChild("Torso", Vector3f(0.0f, 0.45f, 0.0f), Vector3f(0.70f, 0.80f, 0.45f));
     p.torso = torso;
 
     // Heart emblem: invisible pivot + three cubes that read as a heart shape
-    auto heart = torso->addChild(
-        "HeartPivot",
-        Vector3f(0.0f, 0.08f, 0.26f),
-        Vector3f(0.01f, 0.01f, 0.01f));  // near-zero so the pivot box is invisible
+    auto heart = torso->addChild("HeartPivot", Vector3f(0.0f, 0.08f, 0.26f), Vector3f(0.01f, 0.01f, 0.01f)); // near-zero so the pivot box is invisible
     p.heart = heart;
-    heart->addChild("HeartLobeL",
-        Vector3f(-0.04f,  0.03f, 0.0f),
-        Vector3f(0.07f, 0.07f, 0.04f));
-    heart->addChild("HeartLobeR",
-        Vector3f( 0.04f,  0.03f, 0.0f),
-        Vector3f(0.07f, 0.07f, 0.04f));
-    heart->addChild("HeartTip",
-        Vector3f( 0.0f,  -0.04f, 0.0f),
-        Vector3f(0.06f,  0.06f, 0.04f),
-        Vector3f(0.0f,   0.0f,  45.0f));
 
-        auto neck = torso->addChild(
-            "Neck",
-            Vector3f(0.0f, 0.50f, 0.0f),
-            Vector3f(0.18f, 0.25f, 0.18f));
+    heart->addChild("HeartLobeL", Vector3f(-0.04f, 0.03f, 0.0f), Vector3f(0.07f, 0.07f, 0.04f));
+    heart->addChild("HeartLobeR", Vector3f(0.04f, 0.03f, 0.0f), Vector3f(0.07f, 0.07f, 0.04f));
+    heart->addChild("HeartTip", Vector3f(0.0f, -0.04f, 0.0f), Vector3f(0.06f, 0.06f, 0.04f), Vector3f(0.0f, 0.0f, 45.0f));
 
-            auto head = neck->addChild(
-                "Head",
-                Vector3f(0.0f, 0.22f, 0.0f),
-                Vector3f(0.50f, 0.45f, 0.50f));
+    auto neck = torso->addChild("Neck", Vector3f(0.0f, 0.50f, 0.0f), Vector3f(0.18f, 0.25f, 0.18f));
 
-                head->addChild("LeftEye",
-                    Vector3f(-0.12f, 0.05f, 0.26f),
-                    Vector3f(0.18f, 0.18f, 0.05f));
-                head->addChild("RightEye",
-                    Vector3f( 0.12f, 0.05f, 0.26f),
-                    Vector3f(0.18f, 0.18f, 0.05f));
+    auto head = neck->addChild("Head", Vector3f(0.0f, 0.22f, 0.0f), Vector3f(0.50f, 0.45f, 0.50f));
 
-                auto antenna = head->addChild(
-                    "AntennaStick",
-                    Vector3f(0.0f, 0.30f, 0.0f),
-                    Vector3f(0.06f, 0.32f, 0.06f));
-                p.antenna = antenna;
-                antenna->addChild(
-                    "AntennaBall",
-                    Vector3f(0.0f, 0.22f, 0.0f),
-                    Vector3f(0.16f, 0.16f, 0.16f));
+    head->addChild("LeftEye", Vector3f(-0.12f, 0.05f, 0.26f), Vector3f(0.18f, 0.18f, 0.05f));
+    head->addChild("RightEye", Vector3f(0.12f, 0.05f, 0.26f), Vector3f(0.18f, 0.18f, 0.05f));
 
-        auto leftArm = torso->addChild(
-            "LeftUpperArm",
-            Vector3f(-0.48f, 0.20f, 0.0f),
-            Vector3f(0.15f, 0.38f, 0.15f));
-        p.leftUpperArm = leftArm;
-        leftArm->addChild(
-            "LeftForearm",
-            Vector3f(0.0f, -0.28f, 0.0f),
-            Vector3f(0.12f, 0.30f, 0.12f));
+    auto antenna = head->addChild("AntennaStick", Vector3f(0.0f, 0.30f, 0.0f), Vector3f(0.06f, 0.32f, 0.06f));
+    p.antenna = antenna;
+    antenna->addChild("AntennaBall", Vector3f(0.0f, 0.22f, 0.0f), Vector3f(0.16f, 0.16f, 0.16f));
 
-        auto rightArm = torso->addChild(
-            "RightUpperArm",
-            Vector3f( 0.48f, 0.20f, 0.0f),
-            Vector3f(0.15f, 0.38f, 0.15f));
-        p.rightUpperArm = rightArm;
-        rightArm->addChild(
-            "RightForearm",
-            Vector3f(0.0f, -0.28f, 0.0f),
-            Vector3f(0.12f, 0.30f, 0.12f));
+    auto leftArm = torso->addChild("LeftUpperArm", Vector3f(-0.48f, 0.20f, 0.0f), Vector3f(0.15f, 0.38f, 0.15f));
+    p.leftUpperArm = leftArm;
+    leftArm->addChild("LeftForearm", Vector3f(0.0f, -0.28f, 0.0f), Vector3f(0.12f, 0.30f, 0.12f));
 
-    auto leftThigh = p.pelvis->addChild(
-        "LeftThigh",
-        Vector3f(-0.22f, -0.22f, 0.0f),
-        Vector3f(0.20f, 0.40f, 0.20f));
+    auto rightArm = torso->addChild("RightUpperArm", Vector3f(0.48f, 0.20f, 0.0f), Vector3f(0.15f, 0.38f, 0.15f));
+    p.rightUpperArm = rightArm;
+    rightArm->addChild("RightForearm", Vector3f(0.0f, -0.28f, 0.0f), Vector3f(0.12f, 0.30f, 0.12f));
+
+    auto leftThigh = p.pelvis->addChild("LeftThigh", Vector3f(-0.22f, -0.22f, 0.0f), Vector3f(0.20f, 0.40f, 0.20f));
     p.leftThigh = leftThigh;
 
-    auto leftShin = leftThigh->addChild(
-        "LeftShin",
-        Vector3f(0.0f, -0.28f, 0.0f),
-        Vector3f(0.17f, 0.35f, 0.17f));
+    auto leftShin = leftThigh->addChild("LeftShin", Vector3f(0.0f, -0.28f, 0.0f), Vector3f(0.17f, 0.35f, 0.17f));
     p.leftShin = leftShin;
 
-    auto leftFoot = leftShin->addChild(
-        "LeftFoot",
-        Vector3f(0.0f, -0.22f, 0.08f),
-        Vector3f(0.24f, 0.09f, 0.36f));
+    auto leftFoot = leftShin->addChild("LeftFoot", Vector3f(0.0f, -0.22f, 0.08f), Vector3f(0.24f, 0.09f, 0.36f));
     p.leftFoot = leftFoot;
 
-    auto rightThigh = p.pelvis->addChild(
-        "RightThigh",
-        Vector3f( 0.22f, -0.22f, 0.0f),
-        Vector3f(0.20f, 0.40f, 0.20f));
+    auto rightThigh = p.pelvis->addChild("RightThigh", Vector3f(0.22f, -0.22f, 0.0f), Vector3f(0.20f, 0.40f, 0.20f));
     p.rightThigh = rightThigh;
 
-    auto rightShin = rightThigh->addChild(
-        "RightShin",
-        Vector3f(0.0f, -0.28f, 0.0f),
-        Vector3f(0.17f, 0.35f, 0.17f));
+    auto rightShin = rightThigh->addChild("RightShin", Vector3f(0.0f, -0.28f, 0.0f), Vector3f(0.17f, 0.35f, 0.17f));
     p.rightShin = rightShin;
 
-    auto rightFoot = rightShin->addChild(
-        "RightFoot",
-        Vector3f(0.0f, -0.22f, 0.08f),
-        Vector3f(0.24f, 0.09f, 0.36f));
+    auto rightFoot = rightShin->addChild("RightFoot", Vector3f(0.0f, -0.22f, 0.08f), Vector3f(0.24f, 0.09f, 0.36f));
     p.rightFoot = rightFoot;
 
     return p;
 }
 
-void setNodeColor(const std::string& name) {
-    if (name.find("Heart") != std::string::npos) {
-        GLfloat mat[] = { 0.90f, 0.15f, 0.18f, 1.0f };
+void setNodeColor(const std::string &name)
+{
+    if (name.find("Heart") != std::string::npos)
+    {
+        GLfloat mat[] = {0.90f, 0.15f, 0.18f, 1.0f};
         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat);
         return;
     }
-    if (name == "AntennaBall") {
-        GLfloat mat[] = { 1.00f, 0.82f, 0.10f, 1.0f };
+    if (name == "AntennaBall")
+    {
+        GLfloat mat[] = {1.00f, 0.82f, 0.10f, 1.0f};
         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat);
         return;
     }
-    if (name == "AntennaStick") {
-        GLfloat mat[] = { 0.75f, 0.75f, 0.82f, 1.0f };
+    if (name == "AntennaStick")
+    {
+        GLfloat mat[] = {0.75f, 0.75f, 0.82f, 1.0f};
         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat);
         return;
     }
     unsigned h = 0;
-    for (char c : name) h = h * 31 + (unsigned char)c;
-    float r = 0.4f + 0.5f * ((h & 0xFF)       / 255.0f);
-    float g = 0.4f + 0.5f * ((h >> 8 & 0xFF)  / 255.0f);
+    for (char c : name)
+        h = h * 31 + (unsigned char)c;
+    float r = 0.4f + 0.5f * ((h & 0xFF) / 255.0f);
+    float g = 0.4f + 0.5f * ((h >> 8 & 0xFF) / 255.0f);
     float b = 0.4f + 0.5f * ((h >> 16 & 0xFF) / 255.0f);
-    GLfloat mat[] = { r, g, b, 1.0f };
+    GLfloat mat[] = {r, g, b, 1.0f};
     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat);
 }
 
-void renderNode(const ModelNode* node) {
+void renderNode(const ModelNode *node)
+{
     glPushMatrix();
 
     glTranslatef(node->position.x(), node->position.y(), node->position.z());
@@ -200,153 +142,174 @@ void renderNode(const ModelNode* node) {
     glRotatef(node->rotation.x(), 1, 0, 0);
 
     glPushMatrix();
-        glScalef(node->scale.x(), node->scale.y(), node->scale.z());
-        setNodeColor(node->name);
-        glutSolidCube(1.0);
+    glScalef(node->scale.x(), node->scale.y(), node->scale.z());
+    setNodeColor(node->name);
+    glutSolidCube(1.0);
     glPopMatrix();
 
-    for (const auto& child : node->children)
+    for (const auto &child : node->children)
         renderNode(child.get());
 
     glPopMatrix();
 }
 
-static const int   WIN_W    = 1280;
-static const int   WIN_H    = 720;
-static const float FPS      = 30.0f;
-static const float DURATION = 15.0f;  // seconds of animation
+static const int WIN_W = 1280;
+static const int WIN_H = 720;
+static const float FPS = 30.0f;
+static const float DURATION = 15.0f; // seconds of animation
 
-static const float STRIDE_PERIOD  = 1.0f;
-static const float HIP_SWING      = 22.0f;
-static const float KNEE_BEND      = 18.0f;
-static const float ANKLE_COMP     = 10.0f;
-static const float BODY_BOB       = 0.04f;
-static const float BODY_ROCK      = 4.0f;
-static const float ARM_SWING      = 28.0f;
-static const float WALK_SPEED     = 0.6f;
+static const float STRIDE_PERIOD = 1.0f;
+static const float HIP_SWING = 22.0f;
+static const float KNEE_BEND = 18.0f;
+static const float ANKLE_COMP = 10.0f;
+static const float BODY_BOB = 0.04f;
+static const float BODY_ROCK = 4.0f;
+static const float ARM_SWING = 28.0f;
+static const float WALK_SPEED = 0.6f;
 
-static int   g_frame   = 0;
-static float g_time    = 0.0f;
+static int g_frame = 0;
+static float g_time = 0.0f;
 static float g_lastTime = 0.0f;
-static bool  g_capture = false;  // set true via argv to export PPM frames
 static RobotPose g_robot;
 
 // Keyboard state
-static bool g_keys[512] = {};  // Track which keys are pressed
+static bool g_keys[512] = {}; // Track which keys are pressed or not
 
 // Robot movement state
-static float g_robotX = 0.0f;       // World X position
-static float g_robotZ = 0.0f;       // World Z position
-static float g_robotYaw = 0.0f;     // Rotation around Y axis (degrees)
-static float g_walkPhase = 0.0f;    // Current walking animation phase
+static float g_robotX = 0.0f; // World X position
+static float g_robotZ = 0.0f; // World Z position
+static float g_robotYaw = 0.0f; // Rotation around Y axis (degrees)
+static float g_walkPhase = 0.0f; // Current walking animation phase
 static float g_currentSpeed = 0.0f; // Current walking speed
 
 // Keyboard input handlers (write in the report)
-void keyboard(unsigned char key, int x, int y) {
-    if (key == 27) exit(0);  // ESC to quit
+void keyboard(unsigned char key, int x, int y)
+{
+    if (key == 27)
+        exit(0); // ESC to quit popup window
     g_keys[key] = true;
 }
 
-void keyboardUp(unsigned char key, int x, int y) {
+void keyboardUp(unsigned char key, int x, int y)
+{
     g_keys[key] = false;
 }
 
-void special(int key, int x, int y) {
+void special(int key, int x, int y)
+{
     g_keys[key + 256] = true;
 }
 
-void specialUp(int key, int x, int y) {
+void specialUp(int key, int x, int y)
+{
     g_keys[key + 256] = false;
 }
 
-void updatePose(RobotPose& p, float deltaTime) {
+void updatePose(RobotPose &p, float deltaTime)
+{
     const float PI = 3.14159265f;
-    
+
     float speedTarget = 0.0f;
-    static float targetYaw = g_robotYaw; 
+    static float targetYaw = g_robotYaw;
     bool isMoving = false;
 
-    if (g_keys['w'] || g_keys['W']) {
+    if (g_keys['w'] || g_keys['W'])
+    {
         speedTarget = 1.0f;
         targetYaw = 0.0f;
         isMoving = true;
-    } else if (g_keys['a'] || g_keys['A']) {
+    }
+    else if (g_keys['a'] || g_keys['A'])
+    {
         speedTarget = 1.0f;
-        targetYaw = 90.0f;
-        isMoving = true;
-    } else if (g_keys['s'] || g_keys['S']) {
-        speedTarget = 1.0f;
-        targetYaw = 180.0f;
-        isMoving = true;
-    } else if (g_keys['d'] || g_keys['D']) {
-        speedTarget = 1.0f;
-        targetYaw = -90.0f;
+        targetYaw = 90.0f; // turn left
         isMoving = true;
     }
-    
-    // Smooth the speed change to avoid abrupt starts/stops
+    else if (g_keys['s'] || g_keys['S'])
+    {
+        speedTarget = 1.0f;
+        targetYaw = 180.0f; // turn back
+        isMoving = true;
+    }
+    else if (g_keys['d'] || g_keys['D'])
+    {
+        speedTarget = 1.0f;
+        targetYaw = -90.0f; // turn right
+        isMoving = true;
+    }
+
+    // Smooth the speed change to avoid abrupt starts/stops (write in the report)
     g_currentSpeed += (speedTarget - g_currentSpeed) * 0.1f;
-    
+
     // Smoothly rotate towards the target yaw
     float yawDiff = targetYaw - g_robotYaw;
-    
-    // Normalize angle: ensure shortest rotation path (e.g., from 170 degrees to -170 degrees only requires 20 degree rotation)
-    while (yawDiff > 180.0f) yawDiff -= 360.0f;
-    while (yawDiff < -180.0f) yawDiff += 360.0f;
-    
+
+    // Normalize angle: ensure shortest rotation path (e.g., from 170 degrees to -170 degrees only requires 20 degree rotation) (write in the report)
+    while (yawDiff > 180.0f)
+        yawDiff -= 360.0f;
+    while (yawDiff < -180.0f)
+        yawDiff += 360.0f;
+
     // Only update Yaw when moving or angle is not aligned
-    if (std::abs(yawDiff) > 0.1f) {
-        g_robotYaw += yawDiff * 0.15f; // 0.15 為轉向靈敏度
-    } else {
+    if (std::abs(yawDiff) > 0.1f)
+    {
+        g_robotYaw += yawDiff * 0.15f;
+    }
+    else
+    {
         g_robotYaw = targetYaw;
     }
-    
+
     // update position based on current speed and direction
     float moveDistance = g_currentSpeed * WALK_SPEED * deltaTime;
     float yawRad = g_robotYaw * PI / 180.0f;
-    
+
     g_robotX += moveDistance * std::sin(yawRad);
     g_robotZ += moveDistance * std::cos(yawRad);
-    
-    if (g_currentSpeed > 0.01f) {
+
+    if (g_currentSpeed > 0.01f)
+    {
         g_walkPhase += (2.0f * PI * g_currentSpeed / STRIDE_PERIOD) * deltaTime;
         if (g_walkPhase > 2.0f * PI)
             g_walkPhase -= 2.0f * PI;
-    } else {
-        g_walkPhase *= 0.9f; 
     }
-    
+    else
+    {
+        g_walkPhase *= 0.9f;
+    }
+
     float phase = g_walkPhase;
-    
+
     p.pelvis->position.x() = g_robotX;
     p.pelvis->position.y() = 0.80f + BODY_BOB * std::abs(std::sin(phase));
     p.pelvis->position.z() = g_robotZ;
     p.pelvis->rotation.y() = g_robotYaw;
-    
+
     p.torso->rotation.z() = BODY_ROCK * std::sin(2.0f * phase);
-    
+
     // Leg animation
-    p.leftThigh->rotation.x()  =  HIP_SWING * std::sin(phase);
-    p.leftShin->rotation.x()   =  KNEE_BEND * std::max(0.0f, std::sin(phase + PI / 4.0f));
-    p.leftFoot->rotation.x()   = -ANKLE_COMP * std::sin(phase);
-    
-    p.rightThigh->rotation.x() =  HIP_SWING * std::sin(phase + PI);
-    p.rightShin->rotation.x()  =  KNEE_BEND * std::max(0.0f, std::sin(phase + PI + PI / 4.0f));
-    p.rightFoot->rotation.x()  = -ANKLE_COMP * std::sin(phase + PI);
-    
+    p.leftThigh->rotation.x() = HIP_SWING * std::sin(phase);
+    p.leftShin->rotation.x() = KNEE_BEND * std::max(0.0f, std::sin(phase + PI / 4.0f));
+    p.leftFoot->rotation.x() = -ANKLE_COMP * std::sin(phase);
+
+    p.rightThigh->rotation.x() = HIP_SWING * std::sin(phase + PI);
+    p.rightShin->rotation.x() = KNEE_BEND * std::max(0.0f, std::sin(phase + PI + PI / 4.0f));
+    p.rightFoot->rotation.x() = -ANKLE_COMP * std::sin(phase + PI);
+
     // Arm animation
-    p.leftUpperArm->rotation.x()  = -ARM_SWING * std::sin(phase);
+    p.leftUpperArm->rotation.x() = -ARM_SWING * std::sin(phase);
     p.rightUpperArm->rotation.x() = -ARM_SWING * std::sin(phase + PI);
-    
+
     // Rotating antenna and heartbeat
     p.antenna->rotation.y() = std::fmod(255.0f * g_time, 360.0f);
-    
+
     static const float HEART_FREQ = 1.8f;
     float hb = std::abs(std::sin(2.0f * PI * HEART_FREQ * g_time));
     p.heart->position.y() = 0.08f + 0.010f * hb;
 }
 
-void display() {
+void display()
+{
     updatePose(g_robot, 1.0f / FPS);
 
     glClearColor(0.15f, 0.15f, 0.20f, 1.0f);
@@ -362,47 +325,46 @@ void display() {
     glLoadIdentity();
     float px = g_robot.pelvis ? g_robot.pelvis->position.x() : 0.0f;
     float pz = g_robot.pelvis ? g_robot.pelvis->position.z() : 0.0f;
-    gluLookAt(px + 3.5, 2.5, pz + 5.0,   // eye: to the right and behind
-              px, 1.2, pz,                 // look at robot's hip height
-              0.0, 1.0, 0.0);
+    gluLookAt(px + 3.5, 2.5, pz + 5.0, px, 1.2, pz, 0.0, 1.0, 0.0); // eye: to the right and behind, look at robot's hip height
 
-    // Simple lighting
+    // Lighting
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
-    GLfloat lightPos[] = { 3.0f, 6.0f, 5.0f, 1.0f };
+    GLfloat lightPos[] = {3.0f, 6.0f, 5.0f, 1.0f};
     glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-    GLfloat white[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat white[] = {1.0f, 1.0f, 1.0f, 1.0f};
     glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
-    GLfloat ambient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+    GLfloat ambient[] = {0.3f, 0.3f, 0.3f, 1.0f};
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
 
     // Draw ground plane (grey)
     glDisable(GL_LIGHTING);
     glColor3f(0.35f, 0.35f, 0.35f);
     glBegin(GL_QUADS);
-        glVertex3f(-5, 0, -2);
-        glVertex3f(-5, 0, 50);
-        glVertex3f( 5, 0, 50);
-        glVertex3f( 5, 0, -2);
+    glVertex3f(-5, 0, -2);
+    glVertex3f(-5, 0, 50);
+    glVertex3f(5, 0, 50);
+    glVertex3f(5, 0, -2);
     glEnd();
     glEnable(GL_LIGHTING);
 
-    if (g_robot.root) renderNode(g_robot.root.get());
+    if (g_robot.root)
+        renderNode(g_robot.root.get());
 
     glutSwapBuffers();
 }
 
-void timer(int) {
+void timer(int)
+{
     g_time = g_frame / FPS;
     g_lastTime = g_time;
     g_frame++;
     glutPostRedisplay();
-    glutTimerFunc((unsigned)(1000.0f / FPS), timer, 0);  // Infinite loop
+    glutTimerFunc((unsigned)(1000.0f / FPS), timer, 0); // Infinite loop
 }
 
-int main(int argc, char** argv) {
-    g_capture = (argc > 1 && std::string(argv[1]) == "--capture");
-
+int main(int argc, char **argv)
+{
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(WIN_W, WIN_H);
